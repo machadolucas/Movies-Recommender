@@ -1,55 +1,91 @@
 import pandas as pd
+from sklearn.metrics.pairwise import cosine_similarity
 
-# Calculates the jaccard similarity of sets a and b
-def jaccard_sim(a, b):
-    intersection = a.intersection(b)
-    union = a.union(b)
-    return len(intersection) / len(union)
+# 
+# Compute a similarity matrix between an unseen movie and a list of seen movies 
+#
+# INPUT: id of unseen movie, list of seen movies, base matrix for similarity matrix
+# OUTPUT: similarity matrix sorted by similarity to movieId
+#
+def cos_sim_matrix(movieId, movies_user, base_matrix):
+    # Insert movie movieId to the list so we can calculate its cosine similarity to other movies
+    movies_user.insert(0, movieId)
+    similarity_matrix = base_matrix
+    similarity_matrix = similarity_matrix.loc[movies_user]
+    similarity_matrix = similarity_matrix.fillna(0)
+    similarity_matrix = pd.DataFrame(cosine_similarity(similarity_matrix), index=movies_user, columns=movies_user)
+    return similarity_matrix.sort_values(by=movieId, ascending=False, axis=1)
+    # Alternative way
+    # similarity_matrix = pd.DataFrame(cosine_similarity(similarity_matrix.loc[[movieId]], similarity_matrix), index=[movieId], columns=movies_user)
+    # return similarity_matrix.sort_values(by=movieId, ascending=False, axis=1)
 
-# Returns a DataFrame object of jaccard similarities
-def jaccard_sim_find_users(userId, users):
-    # Get the movies the user userId has seen
-    a = users[users['userId'] == userId]
-    a = set(a['movieId'].tolist())
+#
+# Compute a predicted rating for an unseen movie
+#
+# INPUT: id of unseen movie, similarity matrix, number of neighbors
+# OUTPUT: a float value of the predicted rating
+#
+def predicted_rating(movieId, sim_matrix, neighbors):
+    # Get most similar movieIds and similarities
+    movies = sim_matrix.columns.values.tolist()[1:neighbors+1]
+    sim_values = sim_matrix.T[movieId].values.tolist()[1:neighbors+1]
+
+    # Calculate prediction using the formula on page 22 of CF slides
+    top = 0.0
+    for i in range(0, neighbors):
+        # userId's rating for the current movie
+        rating = ratings_df[ratings_df['userId'] == userId]
+        rating = float(rating[rating['movieId'] == movies[i]]['rating'])
+        # Multiply it with similarity of movieId and the current movie
+        top += sim_values[i] * rating
+    bot = 0.0
+    for i in range(0, neighbors):
+        bot += sim_values[i]
+    # Final rating
+    if bot != 0:
+        return top / bot
+    return 0
+
+#
+# Item-based collaborative filtering
+# Basic idea:
+# 1. Find movies the user hasn't seen
+# 2. Compare unseen movies to seen movies and find the most similar ones
+# 3. Use the ratings of similar seen movies to predict the rating of unseen movies
+#
+# INPUT: id of user, number of neighbors to consider
+# OUTPUT: DataFrame object of predicted ratings sorted by highest rating
+#
+def item_based_cf_ratings(userId, neighbors):
+    # Movies the user has seen
+    movies_user = set(ratings_df[ratings_df['userId'] == userId]['movieId'].tolist())
+    # All movies
+    movies_all = set(ratings_df['movieId'])
+    # Unseen movies by the user userId
+    movies_unseen = list(movies_all.difference(movies_user))
     
-    # Find the most similar users using jaccard similarity
-    similarity_list = []
-    for i in range(0, len(set(users['userId']))):
-        b = users[users['userId'] == i]
-        b = set(b['movieId'].tolist())
-        similarity_list.append(jaccard_sim(a, b))
+    # Base for similarity matrix
+    base_matrix = ratings_df.pivot(index='movieId', columns='userId', values='rating')
     
-    # Convert the list to a DataFrame object
-    similarity_df = pd.DataFrame({'similarity':similarity_list})
-    # Add a column for userId
-    similarity_df['userId'] = pd.DataFrame({'userId':range(0, len(set(users['userId'])))})
-    # Sort it descending according to similarity
-    similarity_df = similarity_df.sort_values(by=['similarity'], ascending=False)
-    return similarity_df
-    
-# Returns a DataFrame object of movies that can be recommended to userId
-def recommended_movies(userId, ratings_df):
-    # First find the top5 (really top4) similar users according to jaccard sim
-    similarity_df = jaccard_sim_find_users(userId, ratings_df)
-    user_list = similarity_df['userId'].head().tolist()
-    # Remove the rows and columns which are not needed
-    movies_df = ratings_df.pivot(index='userId', columns='movieId', values='rating')
-    movies_df = movies_df.loc[user_list]
-    # Drop columns (movies) which have NaN values for other than userId
-    movies_df = movies_df.dropna(axis=1, thresh=4, subset=[user_list[1:]])
-    # Sort the movies so the NaN values are last
-    movies_df = movies_df.sort_values(axis=1, by=user_list[0])
-    return movies_df
+    # Calculate a predicted rating for each movie the user hasn't seen
+    predicted_ratings = []
+    for i in range(0, len(movies_unseen)):
+        movieId = movies_unseen[i]
+        sim_matrix = cos_sim_matrix(movieId, list(movies_user), base_matrix)
+        rating = predicted_rating(movieId, sim_matrix, neighbors)
+        predicted_ratings.append(rating)
+        # Calculating ratings takes a while so it's good to have some feedback
+        print("i=" + str(i) + " movieId=" + str(movies_unseen[i]) + " rating=" + str(rating))
+    # Make a DataFrame object of the ratings and sort it by rating
+    df = pd.DataFrame({'movieId':movies_unseen[:len(predicted_ratings)], 'pred_rating':predicted_ratings})
+    return df.sort_values(by='pred_rating', ascending=False)
 
 
+# User to do predictions for
+userId = 2
+# Neighborhood size
+neighbors = 10
+# Input ratings file
 ratings_df = pd.read_csv('ratings_small.csv')
 
-# Bad example (no movies to recommend)
-print("Movie list for userId 1:")
-print(recommended_movies(1, ratings_df))
-
-# Good example (5 movies to recommend)
-print("Movie list for userId 3:")
-print(recommended_movies(3, ratings_df))
-# Correlation matrix of the good example
-print(recommended_movies(3, ratings_df).T.corr(method='pearson'))
+print(item_based_cf_ratings(userId, neighbors).head(25))
