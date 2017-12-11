@@ -82,7 +82,7 @@ def item_based_cf_ratings(userId, neighbors):
 
 
 # User to do predictions for
-userId = 2
+userId = 1
 # Neighborhood size
 neighbors = 10
 # Input ratings file
