@@ -4,7 +4,7 @@ from ast import literal_eval
 
 # Return a list of genres sorted by their frequency in movies seen by the user
 # (ties are sorted alphabetically)
-def find_user_genres(userId):
+def find_user_genres(userId, normalized):
     # Movies the user has seen
     movies_user = ratings_df[ratings_df['userId'] == userId]['movieId'].tolist()
     # Convert the movies from grouplens-movieid to tmdb-movieid
@@ -12,25 +12,37 @@ def find_user_genres(userId):
     for movie in movies_user:
         tmdb_id = links_df[links_df['movieId'] == movie]['tmdbId']
         tmdb_movies.append(int(tmdb_id.values))
-    movies_user = tmdb_movies
     # Find out the genres of those movies
     genre_list = []
-    for movie in movies_user:
+    genre_dict = {}
+    for movie in tmdb_movies:
         genres = movies_df[movies_df['id'] == str(movie)]['genres']
-        # Some movies don't have genres
+        # Convert tmdb-movieid to grouplens-movieid to get the rating
+        mId = int(links_df[links_df['tmdbId'] == movie]['movieId'])
+        rating = float(ratings_df[(ratings_df['userId'] == userId) & (ratings_df['movieId'] == mId)]['rating'])
+
+        # Some movies don't have genres 
         if genres.empty:
             continue
         # but most do
         genres = genres.tolist()[0]
         for genre in genres:
             genre_list.append(genre)
-    return sorted(Counter(genre_list).most_common(), key=lambda x: (-x[1], x[0]))
+            genre_dict.setdefault(genre, 0.0)
+            genre_dict[genre] += (2*rating) / 10
+    # Normalized ratings
+    if(normalized):
+    	return sorted(Counter(genre_dict).most_common(), key=lambda x: (-x[1], x[0]))
+    # Non-normalized ratings
+    else:
+    	return sorted(Counter(genre_list).most_common(), key=lambda x: (-x[1], x[0]))
     
 # Calculate the genre score of movieId for userId
 # Genre score is a float value between 0 and 1
 def genre_score(userId, movieId):
     # List of genres of the movies userId has seen
-    user_genres = dict(find_user_genres(userId))
+    user_genres = dict(find_user_genres(userId, True))
+    total_genres = sum(dict(find_user_genres(userId, False)).values())
     # Convert grouplens-movieid to tmdb-movieid
     movieId = int(links_df[links_df['movieId'] == movieId]['tmdbId'])
     # List of genres of movieId
@@ -43,7 +55,7 @@ def genre_score(userId, movieId):
         for genre in movie_genres:
             if genre in user_genres:
                 genre_score += user_genres[genre]
-        return genre_score / sum(user_genres.values())
+        return float(genre_score) / total_genres
         
     
 ratings_df = pd.read_csv('ratings_small.csv')
@@ -58,4 +70,3 @@ movies_df['genres'] = movies_df['genres'].fillna('[]').apply(literal_eval).apply
 movies = [71433, 111235, 80, 101070, 1759]
 for m in movies:
     print(genre_score(1, m))
-
