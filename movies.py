@@ -1,6 +1,14 @@
 import pandas as pd
 import numpy as np
 from ast import literal_eval
+import matplotlib.pyplot as plt
+import seaborn as sns
+from scipy import stats
+from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
+from sklearn.metrics.pairwise import linear_kernel, cosine_similarity
+from nltk.stem.snowball import SnowballStemmer
+from nltk.stem.wordnet import WordNetLemmatizer
+from nltk.corpus import wordnet
 
 ratings_df = pd.read_csv('ratings_small.csv')
 movies_df = pd.read_csv('movies_metadata.csv', low_memory=False)

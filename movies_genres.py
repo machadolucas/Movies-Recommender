@@ -2,6 +2,7 @@ import pandas as pd
 from collections import Counter
 from ast import literal_eval
 
+
 # Return a list of genres sorted by their frequency in movies seen by the user
 # (ties are sorted alphabetically)
 def find_user_genres(userId, normalized):
@@ -29,14 +30,15 @@ def find_user_genres(userId, normalized):
         for genre in genres:
             genre_list.append(genre)
             genre_dict.setdefault(genre, 0.0)
-            genre_dict[genre] += (2*rating) / 10
+            genre_dict[genre] += (2 * rating) / 10
     # Normalized ratings
-    if(normalized):
-    	return sorted(Counter(genre_dict).most_common(), key=lambda x: (-x[1], x[0]))
+    if (normalized):
+        return sorted(Counter(genre_dict).most_common(), key=lambda x: (-x[1], x[0]))
     # Non-normalized ratings
     else:
-    	return sorted(Counter(genre_list).most_common(), key=lambda x: (-x[1], x[0]))
-    
+        return sorted(Counter(genre_list).most_common(), key=lambda x: (-x[1], x[0]))
+
+
 # Calculate the genre score of movieId for userId
 # Genre score is a float value between 0 and 1
 def genre_score(userId, movieId):
@@ -56,8 +58,8 @@ def genre_score(userId, movieId):
             if genre in user_genres:
                 genre_score += user_genres[genre]
         return float(genre_score) / total_genres
-        
-    
+
+
 ratings_df = pd.read_csv('ratings_small.csv')
 movies_df = pd.read_csv('movies_metadata.csv', low_memory=False)
 links_df = pd.read_csv('links_small.csv')

@@ -1,7 +1,8 @@
 import pandas as pd
 from sklearn.metrics.pairwise import cosine_similarity
 
-# 
+
+#
 # Compute a similarity matrix between an unseen movie and a list of seen movies 
 #
 # INPUT: id of unseen movie, list of seen movies, base matrix for similarity matrix
@@ -19,6 +20,7 @@ def cos_sim_matrix(movieId, movies_user, base_matrix):
     # similarity_matrix = pd.DataFrame(cosine_similarity(similarity_matrix.loc[[movieId]], similarity_matrix), index=[movieId], columns=movies_user)
     # return similarity_matrix.sort_values(by=movieId, ascending=False, axis=1)
 
+
 #
 # Compute a predicted rating for an unseen movie
 #
@@ -27,8 +29,8 @@ def cos_sim_matrix(movieId, movies_user, base_matrix):
 #
 def predicted_rating(movieId, sim_matrix, neighbors):
     # Get most similar movieIds and similarities
-    movies = sim_matrix.columns.values.tolist()[1:neighbors+1]
-    sim_values = sim_matrix.T[movieId].values.tolist()[1:neighbors+1]
+    movies = sim_matrix.columns.values.tolist()[1:neighbors + 1]
+    sim_values = sim_matrix.T[movieId].values.tolist()[1:neighbors + 1]
 
     # Calculate prediction using the formula on page 22 of CF slides
     top = 0.0
@@ -45,6 +47,7 @@ def predicted_rating(movieId, sim_matrix, neighbors):
     if bot != 0:
         return top / bot
     return 0
+
 
 #
 # Item-based collaborative filtering
@@ -63,10 +66,10 @@ def item_based_cf_ratings(userId, neighbors):
     movies_all = set(ratings_df['movieId'])
     # Unseen movies by the user userId
     movies_unseen = list(movies_all.difference(movies_user))
-    
+
     # Base for similarity matrix
     base_matrix = ratings_df.pivot(index='movieId', columns='userId', values='rating')
-    
+
     # Calculate a predicted rating for each movie the user hasn't seen
     predicted_ratings = []
     for i in range(0, len(movies_unseen)):
@@ -77,7 +80,7 @@ def item_based_cf_ratings(userId, neighbors):
         # Calculating ratings takes a while so it's good to have some feedback
         print("i=" + str(i) + " movieId=" + str(movies_unseen[i]) + " rating=" + str(rating))
     # Make a DataFrame object of the ratings and sort it by rating
-    df = pd.DataFrame({'movieId':movies_unseen[:len(predicted_ratings)], 'pred_rating':predicted_ratings})
+    df = pd.DataFrame({'movieId': movies_unseen[:len(predicted_ratings)], 'pred_rating': predicted_ratings})
     return df.sort_values(by='pred_rating', ascending=False)
 
 
