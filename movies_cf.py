@@ -27,7 +27,7 @@ def cos_sim_matrix(movieId, movies_user, base_matrix):
 # INPUT: id of unseen movie, similarity matrix, number of neighbors
 # OUTPUT: a float value of the predicted rating
 #
-def predicted_rating(movieId, sim_matrix, neighbors):
+def predicted_rating(movieId, userId, sim_matrix, neighbors, ratings_df):
     # Get most similar movieIds and similarities
     movies = sim_matrix.columns.values.tolist()[1:neighbors + 1]
     sim_values = sim_matrix.T[movieId].values.tolist()[1:neighbors + 1]
@@ -59,9 +59,11 @@ def predicted_rating(movieId, sim_matrix, neighbors):
 # INPUT: id of user, number of neighbors to consider
 # OUTPUT: DataFrame object of predicted ratings sorted by highest rating
 #
-def item_based_cf_ratings(userId, neighbors):
+def item_based_cf_ratings(userId, neighbors, ratings_df):
     # Movies the user has seen
     movies_user = set(ratings_df[ratings_df['userId'] == userId]['movieId'].tolist())
+    print(len(movies_user))
+    print(neighbors)
     # All movies
     movies_all = set(ratings_df['movieId'])
     # Unseen movies by the user userId
@@ -75,7 +77,7 @@ def item_based_cf_ratings(userId, neighbors):
     for i in range(0, len(movies_unseen)):
         movieId = movies_unseen[i]
         sim_matrix = cos_sim_matrix(movieId, list(movies_user), base_matrix)
-        rating = predicted_rating(movieId, sim_matrix, neighbors)
+        rating = predicted_rating(movieId, userId, sim_matrix, neighbors, ratings_df)
         predicted_ratings.append(rating)
         # Calculating ratings takes a while so it's good to have some feedback
         print("i=" + str(i) + " movieId=" + str(movies_unseen[i]) + " rating=" + str(rating))
@@ -83,7 +85,7 @@ def item_based_cf_ratings(userId, neighbors):
     df = pd.DataFrame({'movieId': movies_unseen[:len(predicted_ratings)], 'pred_rating': predicted_ratings})
     return df.sort_values(by='pred_rating', ascending=False)
 
-
+'''
 # User to do predictions for
 userId = 1
 # Neighborhood size
@@ -92,3 +94,4 @@ neighbors = 10
 ratings_df = pd.read_csv('ratings_small.csv')
 
 print(item_based_cf_ratings(userId, neighbors).head(25))
+'''
