@@ -24,7 +24,7 @@ def cos_sim_matrix(movieId, movies_user, base_matrix):
 #
 # Compute a predicted rating for an unseen movie
 #
-# INPUT: id of unseen movie, similarity matrix, number of neighbors
+# INPUT: id of unseen movie, id of user, similarity matrix, number of neighbors, ratings file
 # OUTPUT: a float value of the predicted rating
 #
 def predicted_rating(movieId, userId, sim_matrix, neighbors, ratings_df):
@@ -56,14 +56,12 @@ def predicted_rating(movieId, userId, sim_matrix, neighbors, ratings_df):
 # 2. Compare unseen movies to seen movies and find the most similar ones
 # 3. Use the ratings of similar seen movies to predict the rating of unseen movies
 #
-# INPUT: id of user, number of neighbors to consider
+# INPUT: id of user, number of neighbors to consider, ratings file
 # OUTPUT: DataFrame object of predicted ratings sorted by highest rating
 #
 def item_based_cf_ratings(userId, neighbors, ratings_df):
     # Movies the user has seen
     movies_user = set(ratings_df[ratings_df['userId'] == userId]['movieId'].tolist())
-    print(len(movies_user))
-    print(neighbors)
     # All movies
     movies_all = set(ratings_df['movieId'])
     # Unseen movies by the user userId
@@ -84,14 +82,3 @@ def item_based_cf_ratings(userId, neighbors, ratings_df):
     # Make a DataFrame object of the ratings and sort it by rating
     df = pd.DataFrame({'movieId': movies_unseen[:len(predicted_ratings)], 'pred_rating': predicted_ratings})
     return df.sort_values(by='pred_rating', ascending=False)
-
-'''
-# User to do predictions for
-userId = 1
-# Neighborhood size
-neighbors = 10
-# Input ratings file
-ratings_df = pd.read_csv('ratings_small.csv')
-
-print(item_based_cf_ratings(userId, neighbors).head(25))
-'''
